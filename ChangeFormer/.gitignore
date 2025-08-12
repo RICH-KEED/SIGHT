@@ -1,0 +1,42 @@
+*.pyc
+*.DS_Store
+./sha256
+./sha256.pub
+
+# Python
+__pycache__/
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Temp and outputs
+temp_uploads/
+temp_outputs/
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Checkpoints and large binaries
+checkpoints/*
+!checkpoints/.gitkeep
+
+# IDEs
+.vscode/
+.idea/

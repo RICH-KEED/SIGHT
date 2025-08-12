@@ -1,0 +1,31 @@
+# ChangeFormer - Complete Requirements
+# AI-Powered Change Detection in Satellite Images
+
+# Core ML Dependencies
+torch>=1.10.0
+torchvision>=0.11.0
+torchaudio>=0.10.0
+numpy>=1.21.0
+scipy>=1.7.0
+matplotlib>=3.4.0
+pillow>=8.4.0
+tqdm>=4.62.0
+einops>=0.3.0
+timm>=0.4.0
+
+# Image Processing
+opencv-python>=4.5.0
+albumentations>=1.0.0
+
+# Web UI Dependencies
+flask>=2.0.0
+werkzeug>=2.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Utilities
+tensorboard>=2.7.0
+
+# Optional: CUDA support (uncomment if you have GPU)
+# torch>=1.10.0+cu102 -f https://download.pytorch.org/whl/torch_stable.html
+# torchvision>=0.11.0+cu102 -f https://download.pytorch.org/whl/torch_stable.html 
