@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.env
+.venv/
+venv/
+
+# Logs
+logs/
+*.log
+
+# Local config
+.env*
+
+# Generated files
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# IDEs
+.vscode/
+.idea/ 
