@@ -184,60 +184,52 @@ class UnifiedAPI:
             }
     
     def run_text_analysis(self, image_a_url, image_b_url, change_mask_url):
-        """Run text analysis on three image URLs"""
+        """Run text analysis on three image URLs. Auto-resizes if any side > 4096 to satisfy API limits."""
         try:
-            # Create messages with URLs
+            # Ensure images meet size limits (<= 8000px per side). We cap at 4096 for safety.
+            def resize_if_needed(pil_img: Image.Image, max_side: int = 4096) -> Image.Image:
+                w, h = pil_img.size
+                if max(w, h) <= max_side:
+                    return pil_img
+                scale = max_side / float(max(w, h))
+                new_size = (int(w * scale), int(h * scale))
+                return pil_img.resize(new_size, Image.Resampling.LANCZOS)
+
+            try:
+                a_img = resize_if_needed(self.download_image_from_url(image_a_url))
+                b_img = resize_if_needed(self.download_image_from_url(image_b_url))
+                m_img = resize_if_needed(self.download_image_from_url(change_mask_url))
+
+                # Re-upload resized versions to ImgBB
+                a_url_small = self.upload_image_to_imgbb(a_img)
+                b_url_small = self.upload_image_to_imgbb(b_img)
+                m_url_small = self.upload_image_to_imgbb(m_img)
+            except Exception:
+                # Fallback to original URLs if any step fails
+                a_url_small, b_url_small, m_url_small = image_a_url, image_b_url, change_mask_url
+
+            # Create messages with URLs (use resized URLs if available)
             messages = [
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "type": "text",
-                            "text": "Analyze these satellite images for changes. Provide a concise summary of:\n1. What changed (buildings, roads, vegetation, etc.)\n2. Scale of changes (small, medium, large areas)\n3. Type of development (urban, agricultural, infrastructure)\n4. Notable patterns or clusters\n\nBefore Image:. Also tell if the change is positive or negative."
-                        },
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "url",
-                                "url": image_a_url,
-                            },
-                        },
-                        {
-                            "type": "text",
-                            "text": "After Image:"
-                        },
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "url",
-                                "url": image_b_url,
-                            },
-                        },
-                        {
-                            "type": "text",
-                            "text": "Change Detection Result (white areas = detected changes):"
-                        },
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "url",
-                                "url": change_mask_url,
-                            },
-                        },
-                        {
-                            "type": "text",
-                            "text": "Keep the analysis clear and actionable for satellite image interpretation."
-                        }
+                        {"type": "text", "text": "Analyze these satellite images for changes. Provide a concise summary of:\n1. What changed (buildings, roads, vegetation, etc.)\n2. Scale of changes (small, medium, large areas)\n3. Type of development (urban, agricultural, infrastructure)\n4. Notable patterns or clusters\n\nBefore Image:. Also tell if the change is positive or negative."},
+                        {"type": "image", "source": {"type": "url", "url": a_url_small}},
+                        {"type": "text", "text": "After Image:"},
+                        {"type": "image", "source": {"type": "url", "url": b_url_small}},
+                        {"type": "text", "text": "Change Detection Result (white areas = detected changes):"},
+                        {"type": "image", "source": {"type": "url", "url": m_url_small}},
+                        {"type": "text", "text": "Keep the analysis clear and actionable for satellite image interpretation."}
                     ],
                 }
             ]
-            
+
             response = self.anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1000,
                 messages=messages,
             )
-            
+
             return {
                 'success': True,
                 'analysis': response.content[0].text,
@@ -245,7 +237,7 @@ class UnifiedAPI:
                 'image_b_url': image_b_url,
                 'change_mask_url': change_mask_url
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
@@ -403,12 +395,11 @@ def combined_endpoint():
 # New: Legacy-compatible route matching prior web_ui behavior
 @app.route('/process_urls', methods=['POST'])
 def process_urls_endpoint():
-    """Accepts two image URLs and optionally runs analysis.
+    """Accepts two image URLs and runs ChangeFormer only (no analysis).
     Payload:
     {
       "image_a_url": str,
-      "image_b_url": str,
-      "analyze": bool  # optional; default true
+      "image_b_url": str
     }
     """
     if not api:
@@ -421,15 +412,11 @@ def process_urls_endpoint():
 
         image_a_url = data.get('image_a_url')
         image_b_url = data.get('image_b_url')
-        analyze = data.get('analyze', True)
 
         if not image_a_url or not image_b_url:
             return jsonify({'error': 'Both image_a_url and image_b_url are required'}), 400
 
-        if analyze:
-            result = api.run_combined(image_a_url, image_b_url)
-        else:
-            result = api.run_changeformer(image_a_url, image_b_url)
+        result = api.run_changeformer(image_a_url, image_b_url)
 
         status = 200 if result.get('success') else 500
         return jsonify(result), status
